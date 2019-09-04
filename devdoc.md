@@ -61,8 +61,13 @@ npx (npm5.0以上)避免全局安装模块
 是能让你在函数的数组中勾入react特性的函数   
 
 useState  
+读写记录状态   
+
+useRef   
+可以记录绑定的节点元素，从而对其进行操作   
 
 useEffect  
+响应事件
 副作用   
 - 无需清除的副作用   
 ```
@@ -73,8 +78,7 @@ useEffect
 - 需要清除的副作用
 ```
       const updateMouse = (event)=>{
-                setPositions({x:event.clientX,y:event.clientY})
-           
+          setPositions({x:event.clientX,y:event.clientY})
         }
         console.log('addlistener')
         document.addEventListener('click',updateMouse)
@@ -99,5 +103,40 @@ axios.get('https://dog.ceo/api/breeds/image/random').then(res=>{
 })
     },[fetch])
 ```
+
+#### HOC(Higher Order component)高阶组件   
+- 高阶组件就是一个函数，接受一个组件作为参数，返回一个新的组件  
+
+
+#### Hook规则
+
+- 只在最顶层使用Hook   
+不要在循环，条件或嵌套函数中调用 Hook  
+- 是在react函数中使用Hook，或者其他自定义hook中使用hook
+
+
+#### react 思想流程
+- 将设计好的UI划分为组件层级  
+- 创建应用的静态版本  
+...
+
+#### 组件拆分  
+左侧：   
+- filesearch   
+- filelist
+- new file
+- load file 
+
+右侧：
+- file tabs
+- editor
+
+启动插件   
+concurrently   同时打开server和electron
+wait-on //等待文件启动后启动另一个文件    
+cross-env  //BROWSER=node server启动后不会打开web端   
+
+
+
 
 
