@@ -118,6 +118,7 @@ axios.get('https://dog.ceo/api/breeds/image/random').then(res=>{
 #### react 思想流程
 - 将设计好的UI划分为组件层级  
 - 创建应用的静态版本  
+- 确定UI state最小且完整表示
 ...
 
 #### 组件拆分  
@@ -137,6 +138,12 @@ wait-on //等待文件启动后启动另一个文件
 cross-env  //BROWSER=node server启动后不会打开web端   
 
 
+开发模块
+classnames 组合classname  
+
+#### 自定义hook组件
+
+useKeyPress监听键盘按下事件，按enter键提交，按esc退出输入框
 
 
 
