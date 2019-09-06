@@ -14,20 +14,25 @@ const [ value,setValue ] = useState('')
    const enterPressed = useKeyPress(13)
    const escPressed = useKeyPress(27)
    let node = useRef(null)
-    const closeSearch = ()=>{
+   const closeSearch = (editItem)=>{
     setEditStatus(false)
     setValue('')
+    //if we are aditing a newly created file,we should delete this file 
+    if(editItem.isNew){
+        onFileDelete(editItem.id)
+    }
    }
    useEffect(()=>{
+    const editItem = files.find(file => file.id ===editStatus)
+
     //响应键盘事件
-    if(enterPressed && editStatus){
-        const editItem = files.find(file => file.id ===editStatus)
+    if(enterPressed && editStatus && value.trim() !==''){
             onSaveEdit(editItem.id,value)
             setEditStatus(false)
             setValue('')
     }
     if(escPressed && editStatus){
-        closeSearch()
+        closeSearch(editItem)
     }
   
    
@@ -47,6 +52,15 @@ const [ value,setValue ] = useState('')
     //     document.removeEventListener('keyup',handleInputEvent)
     // }
 })
+useEffect(()=>{
+    //响应新建文档事件
+    const newFile = files.find(file=>file.isNew)
+   console.log(newFile)
+   if(newFile){
+    setEditStatus(newFile.id)
+    setValue(newFile.title)
+   }
+},[files])
 
 useEffect(()=>{
     //响应聚焦事件
@@ -64,7 +78,7 @@ useEffect(()=>{
                      >
 
                      {
-                         (file.id!== editStatus) &&
+                         ((file.id !== editStatus ||  !file.isNew)) &&
                          <Fragment>        
                             <span className="col-2 ">
                             <FontAwesomeIcon icon={faMarkdown} title=""/>
@@ -81,10 +95,10 @@ useEffect(()=>{
                          </Fragment>
                       }
                       {
-                          (file.id===editStatus) &&
+                          ((file.id===editStatus) ||  file.isNew) &&
                           <Fragment>
-                              <input className="form-control col-10" ref={node}  value={value} onChange={(e)=>{setValue(e.target.value)}} />
-                                  <button  type="button" className="icon-button col-2" onClick={closeSearch}>
+                              <input className="form-control col-10" placeholder="请输入文件名称" ref={node}  value={value} onChange={(e)=>{setValue(e.target.value)}} />
+                                  <button  type="button" className="icon-button col-2" onClick={()=>closeSearch(file)}>
                                     <FontAwesomeIcon icon={faTimes} title="关闭"/>
                                   </button>
                           </Fragment>

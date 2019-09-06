@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus,faFileImport ,faTimes} from '@fortawesome/free-solid-svg-icons'
 import SimpleMDE from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
+import uuidv4 from 'uuid/v4'
 import FileSearch from './components/FileSearch'
 import FilesList from './components/FileList'
 import BottomBtn from './components/BottomBtn'
@@ -94,6 +95,7 @@ function App() {
              const newFiles = files.map(file=>{
                 if(file.id === id){
                   file.title = title
+                  file.isNew = false
                 }
                 return file
              })
@@ -103,11 +105,23 @@ function App() {
 
      const fileSearch = (keyWords)=>{
            //filter out the new files
-           console.log(keyWords)
            const newFiles = files.filter(file=>file.title.includes(keyWords))
            setSearchedFiles(newFiles)
      }
      const fileListArray = (searchedFiles.length >0)?searchedFiles:files
+
+     const createNewFile = ()=>{
+       const newId = uuidv4()
+       let newFiles = [...files,{
+         id:newId,
+         title:'',
+         body:'## 请输入markdown',
+         createdAt:new Date().getTime(),
+         isNew:true
+       }]
+       
+       setFiles(newFiles)
+     }
   return (
     <div className="App container-fluid px-0">
       <div className="row no-gutters">
@@ -126,6 +140,7 @@ function App() {
                        text="新建"
                        colorClass="btn-primary"
                        icon={faPlus}
+                       onBtnclick={createNewFile}
                     />
                 </div>
                 <div className="col-6">
