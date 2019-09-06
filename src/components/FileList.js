@@ -27,7 +27,7 @@ const [ value,setValue ] = useState('')
 
     //响应键盘事件
     if(enterPressed && editStatus && value.trim() !==''){
-            onSaveEdit(editItem.id,value)
+            onSaveEdit(editItem.id,value,editItem.isNew)
             setEditStatus(false)
             setValue('')
     }

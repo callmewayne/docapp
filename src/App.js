@@ -5,12 +5,16 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus,faFileImport ,faTimes} from '@fortawesome/free-solid-svg-icons'
 import SimpleMDE from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
+import fileHelper from './utils/fileHelper'
+
 import uuidv4 from 'uuid/v4'
 import FileSearch from './components/FileSearch'
 import FilesList from './components/FileList'
 import BottomBtn from './components/BottomBtn'
 import TabList from './components/TabList'
 
+const { join } = window.require('path')
+const { remote } = window.require('electron')
 let defaultFiles = [
   {
       id:'1',
@@ -39,6 +43,7 @@ function App() {
     const [ openFileIDs,setOpenFileIDs ] = useState([])
     const [ unsaveFileIDs,setUnsaveFileIDs] = useState([])
     const [ searchedFiles,setSearchedFiles] = useState([])
+    const savedLocation = remote.app.getPath('documents')
     const openedFiles = openFileIDs.map(openID=>{
       return files.find(file => file.id === openID)
     })
@@ -91,15 +96,31 @@ function App() {
            tabClose(id)
      }
 
-     const updateFileName = (id,title)=>{
-             const newFiles = files.map(file=>{
-                if(file.id === id){
-                  file.title = title
-                  file.isNew = false
-                }
-                return file
-             })
-             setFiles(newFiles)
+     const updateFileName = (id,title,isNew)=>{
+       let modifyFile 
+      const newFiles = files.map(file=>{
+        if(file.id === id){
+          modifyFile = file
+          file.title = title
+          file.isNew = false
+        
+        }
+        return file
+    })
+       if(isNew){
+          fileHelper.writeFile(join(savedLocation,`${modifyFile.title}.md`),modifyFile.body)
+          .then(()=>{
+              setFiles(newFiles)
+          })
+       }else{
+        fileHelper.renameFile(join(savedLocation,`${modifyFile.title}.md`),
+        join(savedLocation,`${title}.md`)
+        )
+        .then(()=>{
+            setFiles(newFiles)
+        })
+       }
+            
 
      }
 
