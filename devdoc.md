@@ -150,3 +150,13 @@ useKeyPress监听键盘按下事件，按enter键提交，按esc退出输入框
 
 - 使用fs模块操作文件
 
+
+#### flatten state
+- 打平数据冗余，解决数据冗余，normalizing state shape
+- 处理数据更加方便
+
+#### 添加持久化数据存储
+
+使用electron-store来缓存文件索引信息   
+
+

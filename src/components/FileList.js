@@ -55,7 +55,6 @@ const [ value,setValue ] = useState('')
 useEffect(()=>{
     //响应新建文档事件
     const newFile = files.find(file=>file.isNew)
-   console.log(newFile)
    if(newFile){
     setEditStatus(newFile.id)
     setValue(newFile.title)

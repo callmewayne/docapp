@@ -2,11 +2,12 @@ import React ,{ useState,useEffect,Fragment} from 'react';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlus,faFileImport ,faTimes} from '@fortawesome/free-solid-svg-icons'
+import { faPlus,faFileImport ,faSave} from '@fortawesome/free-solid-svg-icons'
 import SimpleMDE from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
 import fileHelper from './utils/fileHelper'
 
+import { flattenArr,objToArr} from './utils/helper'
 import uuidv4 from 'uuid/v4'
 import FileSearch from './components/FileSearch'
 import FilesList from './components/FileList'
@@ -15,48 +16,96 @@ import TabList from './components/TabList'
 
 const { join } = window.require('path')
 const { remote } = window.require('electron')
+const  Store = window.require('electron-store')
+
+const fileStore = new Store({'name':'Files Data'})
+const saveFilesToStore = (files)=>{
+  //不需要把所有的信息都存到filesystem里
+  const fileStoreObj = objToArr(files).reduce((result,file)=>{
+    const { id, path ,title,createdAt} = file
+    result[id] = {
+      id,
+      path,
+      title,
+      createdAt
+    }
+    return result
+  },{})
+  fileStore.set('files',fileStoreObj)
+}
+
+
+
 let defaultFiles = [
-  {
-      id:'1',
-      title:'first poo',
-      body:'should be',
-      createdAt:123456
-  },
-  {
-      id:'2',
-      title:'secend poo',
-      body:'## should be',
-      createdAt:123456
-  },
+  // {
+  //     id:'1',
+  //     title:'first poo',
+  //     body:'should be',
+  //     createdAt:123456
+  // },
+  // {
+  //     id:'2',
+  //     title:'secend poo',
+  //     body:'## should be',
+  //     createdAt:123456
+  // },
  
-  {
-      id:'3',
-      title:'thirds post',
-      body:'## thirds post',
-      createdAt:123456
-  },
+  // {
+  //     id:'3',
+  //     title:'thirds post',
+  //     body:'## thirds post',
+  //     createdAt:123456
+  // },
 ]
 
 function App() {
-    const [ files,setFiles] = useState(defaultFiles)
+    const [ files,setFiles] = useState(fileStore.get('files') || {})
+    console.log(files)
     const [ activeFileID,setActiveFileID ] = useState('')
     const [ openFileIDs,setOpenFileIDs ] = useState([])
     const [ unsaveFileIDs,setUnsaveFileIDs] = useState([])
     const [ searchedFiles,setSearchedFiles] = useState([])
     const savedLocation = remote.app.getPath('documents')
+    const filesArr = objToArr(files)
+    console.log(filesArr)
     const openedFiles = openFileIDs.map(openID=>{
-      return files.find(file => file.id === openID)
+      return files[openID]
     })
+    const activeFile = files[activeFileID]
+    const fileListArray = (searchedFiles.length >0)?searchedFiles:filesArr
+    const notFoundFile = (fileID)=>{
+      var r = window.confirm("未找到此文件,将更新文件列表");
+      if (r == true) {
+        const {[fileID]:value,...afterDelete} = files
+        setFiles(afterDelete)
+        saveFilesToStore(afterDelete)
+      } 
+    }
+
     const fileClick = (fileID)=>{
       setActiveFileID(fileID)
+      const currentFile = files[fileID]
+      if(!currentFile.isLoaded){
+            fileHelper.readFile(currentFile.path).then((value=>{
+              const newFile = {...files[fileID],body:value,isLoaded:true}
+              setFiles({...files,[fileID]:newFile})
+            })).catch(err=>{
+              //如果没有找到本地文件，则会删除files里对应的文件
+              if(err.toString().includes('no such file or directory')){
+                notFoundFile(fileID)
+              }else{
+                console.log(false)
+              }
+            })
+      }
       if(!openFileIDs.includes(fileID)){
          setOpenFileIDs([...openFileIDs,fileID])
       }
       //add new open fileID
 
     }
-    const activeFile = files.find(file => file.id === activeFileID)
-
+    // const activeFile = files.find(file => file.id === activeFileID)
+  
     const tabClick = (fileID)=>{
       setActiveFileID(fileID)
      }
@@ -75,14 +124,10 @@ function App() {
      }
 
      const fileChange = (id,value)=>{
-       //loop throuth file arrary to update to new value
-            const newFiles = files.map(file=>{
-              if(file.id ===id){
-                file.boday = value
-              }
-              return file
-            })
-            setFiles(newFiles)
+           
+            const newFile = {...files[id],body:value}
+            console.log(newFile)
+          setFiles({...files,[id]:newFile})
             //update unsavefileid
             if(!unsaveFileIDs.includes(id)){
               setUnsaveFileIDs([...unsaveFileIDs,id])
@@ -90,34 +135,65 @@ function App() {
      }
 
      const deleteFile = (id)=>{
-           const newFiles = files.filter(file=>file.id !==id)
-           setFiles(newFiles)
-           //close tab if open
-           tabClose(id)
+       if(files[id].isNew){
+         //解构赋值技巧，
+         //将你想删除的对象抽离出来，然后取出后面所有的值，就相当于你在这个对象中删除了一个key
+         const {[id]:value,...afterDelete} = files
+        // delete files[id]
+        setFiles(afterDelete)
+       }else{
+        fileHelper.deleteFile(files[id].path)
+        .then(()=>{
+          const {[id]:value,...afterDelete} = files
+          setFiles(afterDelete)
+          saveFilesToStore(afterDelete)
+         //close tab if open
+         tabClose(id)
+       
+        }).catch(err=>{
+          //如果没有找到本地文件，则会删除files里对应的文件
+          if(err.toString().includes('no such file or directory')){
+            notFoundFile(id)
+          }else{
+            console.log(false)
+          }
+        })
+       }
      }
 
      const updateFileName = (id,title,isNew)=>{
-       let modifyFile 
-      const newFiles = files.map(file=>{
-        if(file.id === id){
-          modifyFile = file
-          file.title = title
-          file.isNew = false
-        
-        }
-        return file
-    })
+       const newPath = join(savedLocation,`${title}.md`)
+       let modifyFile = {...files[id],title,isNew:false,path:newPath} 
+       const newFiles = {...files,[id]:modifyFile}
+
        if(isNew){
-          fileHelper.writeFile(join(savedLocation,`${modifyFile.title}.md`),modifyFile.body)
+          fileHelper.writeFile(newPath,files[id].body)
           .then(()=>{
               setFiles(newFiles)
+              saveFilesToStore(newFiles)
+          }).catch(err=>{
+            //如果没有找到本地文件，则会删除files里对应的文件
+            if(err.toString().includes('no such file or directory')){
+              notFoundFile(id)
+            }else{
+              console.log(false)
+            }
           })
        }else{
-        fileHelper.renameFile(join(savedLocation,`${modifyFile.title}.md`),
-        join(savedLocation,`${title}.md`)
+         let oldPath = join(savedLocation,`${files[id].title}.md`)
+        fileHelper.renameFile(oldPath,
+          newPath
         )
         .then(()=>{
-            setFiles(newFiles)
+          setFiles(newFiles)
+          saveFilesToStore(newFiles)
+        }).catch(err=>{
+          //如果没有找到本地文件，则会删除files里对应的文件
+          if(err.toString().includes('no such file or directory')){
+            notFoundFile(id)
+          }else{
+            console.log(false)
+          }
         })
        }
             
@@ -126,23 +202,33 @@ function App() {
 
      const fileSearch = (keyWords)=>{
            //filter out the new files
-           const newFiles = files.filter(file=>file.title.includes(keyWords))
+           const newFiles = filesArr.filter(file=>file.title.includes(keyWords))
+
            setSearchedFiles(newFiles)
      }
-     const fileListArray = (searchedFiles.length >0)?searchedFiles:files
+     
 
      const createNewFile = ()=>{
        const newId = uuidv4()
-       let newFiles = [...files,{
+       let newFile = {
          id:newId,
          title:'',
          body:'## 请输入markdown',
          createdAt:new Date().getTime(),
          isNew:true
-       }]
-       
-       setFiles(newFiles)
+       }
+   
+       setFiles({...files,[newId]:newFile})
      }
+
+      const saveCurrentFile = ()=>{
+     fileHelper.writeFile(join(savedLocation,`${activeFile.title}.md`),
+     activeFile.body
+     ).then(()=>{
+       setUnsaveFileIDs(unsaveFileIDs.filter(id=>id !== activeFile.id))
+     })
+      }
+
   return (
     <div className="App container-fluid px-0">
       <div className="row no-gutters">
@@ -150,9 +236,9 @@ function App() {
               <FileSearch title='My Document' onFileSearch={fileSearch}/>
               <FilesList 
                 files={fileListArray}
-              onFileClick={fileClick}
-             onFileDelete={deleteFile}
-             onSaveEdit={updateFileName}
+                onFileClick={fileClick}
+                onFileDelete={deleteFile}
+                onSaveEdit={updateFileName}
              
               />
               <div className="row no-gutters button-group">
@@ -168,7 +254,9 @@ function App() {
                     <BottomBtn 
                       text="导入"
                       colorClass="btn-success"
-                      icon={faFileImport}/>
+                      icon={faFileImport}
+                      />
+                     
                 </div>
               </div>
           </div>
@@ -202,8 +290,14 @@ function App() {
 
                 </Fragment>
              }
-           
+              <BottomBtn 
+                      text="保存"
+                      colorClass="btn-success"
+                      icon={faSave}
+                      onBtnclick={saveCurrentFile}
+                      />
           </div>
+         
        </div>
       
     </div>
