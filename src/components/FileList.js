@@ -77,7 +77,7 @@ useEffect(()=>{
                      >
 
                      {
-                         ((file.id !== editStatus ||  !file.isNew)) &&
+                         ((file.id !== editStatus) &&  !file.isNew) &&
                          <Fragment>        
                             <span className="col-2 ">
                             <FontAwesomeIcon icon={faMarkdown} title=""/>

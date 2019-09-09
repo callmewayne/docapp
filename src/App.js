@@ -17,8 +17,9 @@ import TabList from './components/TabList'
 const { join } = window.require('path')
 const { remote } = window.require('electron')
 const  Store = window.require('electron-store')
-
 const fileStore = new Store({'name':'Files Data'})
+
+//保存文件列表到store
 const saveFilesToStore = (files)=>{
   //不需要把所有的信息都存到filesystem里
   const fileStoreObj = objToArr(files).reduce((result,file)=>{
@@ -60,19 +61,18 @@ let defaultFiles = [
 
 function App() {
     const [ files,setFiles] = useState(fileStore.get('files') || {})
-    console.log(files)
     const [ activeFileID,setActiveFileID ] = useState('')
     const [ openFileIDs,setOpenFileIDs ] = useState([])
     const [ unsaveFileIDs,setUnsaveFileIDs] = useState([])
     const [ searchedFiles,setSearchedFiles] = useState([])
     const savedLocation = remote.app.getPath('documents')
     const filesArr = objToArr(files)
-    console.log(filesArr)
     const openedFiles = openFileIDs.map(openID=>{
       return files[openID]
     })
     const activeFile = files[activeFileID]
     const fileListArray = (searchedFiles.length >0)?searchedFiles:filesArr
+    //未发现文件事件
     const notFoundFile = (fileID)=>{
       var r = window.confirm("未找到此文件,将更新文件列表");
       if (r == true) {
@@ -81,7 +81,7 @@ function App() {
         saveFilesToStore(afterDelete)
       } 
     }
-
+  //点击文件事件
     const fileClick = (fileID)=>{
       setActiveFileID(fileID)
       const currentFile = files[fileID]
@@ -101,15 +101,15 @@ function App() {
       if(!openFileIDs.includes(fileID)){
          setOpenFileIDs([...openFileIDs,fileID])
       }
-      //add new open fileID
 
     }
-    // const activeFile = files.find(file => file.id === activeFileID)
   
+    //点击tab事件
     const tabClick = (fileID)=>{
       setActiveFileID(fileID)
      }
 
+     //关闭tab事件
      const tabClose = (id)=>{
        //remove this current id from openFileIDs
            const tabsWithout = openFileIDs.filter(fileID=>fileID !== id)
@@ -122,24 +122,22 @@ function App() {
            }
 
      }
-
+    //文件变化事件
      const fileChange = (id,value)=>{
-           
             const newFile = {...files[id],body:value}
-            console.log(newFile)
           setFiles({...files,[id]:newFile})
             //update unsavefileid
             if(!unsaveFileIDs.includes(id)){
               setUnsaveFileIDs([...unsaveFileIDs,id])
             }
      }
-
+    //删除文件事件
      const deleteFile = (id)=>{
        if(files[id].isNew){
          //解构赋值技巧，
          //将你想删除的对象抽离出来，然后取出后面所有的值，就相当于你在这个对象中删除了一个key
          const {[id]:value,...afterDelete} = files
-        // delete files[id]
+        //为什么不直接 delete files[id] ，删除一个对象后files的索引id不变，react不更新数据，所以采用抽离对象的方式改变files
         setFiles(afterDelete)
        }else{
         fileHelper.deleteFile(files[id].path)
@@ -207,7 +205,7 @@ function App() {
            setSearchedFiles(newFiles)
      }
      
-
+    //创建文件事件
      const createNewFile = ()=>{
        const newId = uuidv4()
        let newFile = {

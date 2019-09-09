@@ -51,10 +51,15 @@ Main process <--> IPC <--> renderer process
 
 npx (npm5.0以上)避免全局安装模块
 
-#### React
+#### window.onload && window.addEventListener 区别
+执行顺序：  
+- addEventListener 比 onload 先执行 
+- addEventListener 在DOM树加载完毕后执行
+- onload 在DOM树加载完并且所有文件（图片，脚本）加载完之后执行
+执行次数：
+- addEventListener 可多次调用
+- onload 只能绑定一次，多次绑定则执行最后一次绑定的处理函数
 
-声明式写法
-组件化
 
 
 #### Hook
@@ -154,9 +159,26 @@ useKeyPress监听键盘按下事件，按enter键提交，按esc退出输入框
 #### flatten state
 - 打平数据冗余，解决数据冗余，normalizing state shape
 - 处理数据更加方便
+```
+export const flattenArr = (arr)=>{
+      return arr.reduce((map,item)=>{
+          map[item.id] = item
+          return map
+      },{})
+}
+
+```
+使用reduce函数，遍历数组取元素id为key，元素本身为value，将数组组合成map形式数据结构
 
 #### 添加持久化数据存储
 
 使用electron-store来缓存文件索引信息   
 
+#### 结构赋值技巧
+将你想删除的对象抽离出来，然后取出后面所有的值，就相当于你在这个对象中删除了一个元素
+```
+const {[id]:value,...afterDelete} = files
+value是你匹配出的对象
+afterDelete是抽离目标对象后的元素
+```
 
