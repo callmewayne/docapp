@@ -182,3 +182,14 @@ value是你匹配出的对象
 afterDelete是抽离目标对象后的元素
 ```
 
+#### electron方法
+electron dialog
+menu
+openExternal
+
+#### DOM操作
+
+当前点击的元素是否被targetSelector包含
+
+document.querySelector(targetSelector).contains(e.target)
+

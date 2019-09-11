@@ -5,14 +5,51 @@ import { faEdit,faTrash ,faTimes} from '@fortawesome/free-solid-svg-icons'
 import { faMarkdown } from '@fortawesome/free-brands-svg-icons'
 import PropTypes from 'prop-types'
 import useKeyPress from '../hooks/useKeyPress'
-
-
+import useContextMenu from '../hooks/useContextMenu'
+import {getParentNode}  from  '../utils/helper'
+const { join ,basename,extname,dirname} = window.require('path')
+const { remote } = window.require('electron')
 const FilesList = ({files,onFileClick,onSaveEdit,onFileDelete})=>{
 const [ editStatus,setEditStatus ] = useState(false)
 const [ value,setValue ] = useState('')
    //利用自定义hook监听按键事件
    const enterPressed = useKeyPress(13)
    const escPressed = useKeyPress(27)
+   const clickedItem = useContextMenu([
+    {
+        label:'打开',
+        click:()=>{
+         const parentElement = getParentNode(clickedItem.current,'file-list-item')
+        
+          if(parentElement){
+            onFileClick(parentElement.dataset.id)
+          }
+        }
+    },
+    {
+        label:'重命名',
+        click:()=>{
+            const parentElement = getParentNode(clickedItem.current,'file-list-item')
+            if(parentElement){
+                setEditStatus(parentElement.dataset.id)
+                setValue(parentElement.dataset.title)
+            }
+          
+        }
+    },
+    {
+        label:'删除',
+        click:()=>{
+            const parentElement = getParentNode(clickedItem.current,'file-list-item')
+            if(parentElement){
+                onFileDelete(parentElement.dataset.id)
+            }
+           
+        }
+    },
+],'.file-list',[files])
+
+
    let node = useRef(null)
    const closeSearch = (editItem)=>{
     setEditStatus(false)
@@ -22,6 +59,8 @@ const [ value,setValue ] = useState('')
         onFileDelete(editItem.id)
     }
    }
+  
+
    useEffect(()=>{
     const editItem = files.find(file => file.id ===editStatus)
 
@@ -74,6 +113,8 @@ useEffect(()=>{
                   return   <li 
                        className="list-group-item row bg-light d-flex align-items-center file-list-item mx-0"
                        key={file.id}
+                       data-id={file.id}
+                       data-title={file.title}
                      >
 
                      {
@@ -82,15 +123,15 @@ useEffect(()=>{
                             <span className="col-2 ">
                             <FontAwesomeIcon icon={faMarkdown} title=""/>
                             </span>
-                            <span className="col-6 c-link" onClick={()=>{onFileClick(file.id)}}>
+                            <span className="col-8 c-link" onClick={()=>{onFileClick(file.id)}}>
                                 {file.title}
                             </span>
-                            <button  type="button" className="icon-button col-2" onClick={()=>{setEditStatus(file.id);setValue(file.title)}} >
+                            {/* <button  type="button" className="icon-button col-2" onClick={()=>{setEditStatus(file.id);setValue(file.title)}} >
                                 <FontAwesomeIcon icon={faEdit} title="编辑"/>
                             </button>
                             <button  type="button" className="icon-button col-2">
                                 <FontAwesomeIcon icon={faTrash} onClick={()=>{onFileDelete(file.id)}} title="删除"/>
-                            </button>
+                            </button> */}
                          </Fragment>
                       }
                       {

@@ -6,7 +6,6 @@ import { faPlus,faFileImport ,faSave} from '@fortawesome/free-solid-svg-icons'
 import SimpleMDE from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
 import fileHelper from './utils/fileHelper'
-
 import { flattenArr,objToArr} from './utils/helper'
 import uuidv4 from 'uuid/v4'
 import FileSearch from './components/FileSearch'
@@ -14,10 +13,14 @@ import FilesList from './components/FileList'
 import BottomBtn from './components/BottomBtn'
 import TabList from './components/TabList'
 
-const { join } = window.require('path')
-const { remote } = window.require('electron')
+import useIpcRenderer from './hooks/useIpcRenderer'
+
+const { join ,basename,extname,dirname} = window.require('path')
+const { remote,ipcRenderer } = window.require('electron')
 const  Store = window.require('electron-store')
 const fileStore = new Store({'name':'Files Data'})
+
+
 
 //保存文件列表到store
 const saveFilesToStore = (files)=>{
@@ -72,6 +75,10 @@ function App() {
     })
     const activeFile = files[activeFileID]
     const fileListArray = (searchedFiles.length >0)?searchedFiles:filesArr
+
+  
+
+
     //未发现文件事件
     const notFoundFile = (fileID)=>{
       var r = window.confirm("未找到此文件,将更新文件列表");
@@ -103,7 +110,7 @@ function App() {
       }
 
     }
-  
+    
     //点击tab事件
     const tabClick = (fileID)=>{
       setActiveFileID(fileID)
@@ -124,12 +131,14 @@ function App() {
      }
     //文件变化事件
      const fileChange = (id,value)=>{
-            const newFile = {...files[id],body:value}
-          setFiles({...files,[id]:newFile})
-            //update unsavefileid
-            if(!unsaveFileIDs.includes(id)){
-              setUnsaveFileIDs([...unsaveFileIDs,id])
-            }
+       if(value !==files[id].body){
+        const newFile = {...files[id],body:value}
+        setFiles({...files,[id]:newFile})
+          //update unsavefileid
+          if(!unsaveFileIDs.includes(id)){
+            setUnsaveFileIDs([...unsaveFileIDs,id])
+          }
+       }
      }
     //删除文件事件
      const deleteFile = (id)=>{
@@ -160,7 +169,8 @@ function App() {
      }
 
      const updateFileName = (id,title,isNew)=>{
-       const newPath = join(savedLocation,`${title}.md`)
+       //根据是不是新文件做处理，如果不是新文件，则根据老path做处理。取到老文件的dirname，再加上文件的title
+       const newPath = isNew? join(savedLocation,`${title}.md`):join(dirname(files[id].path),`${title}.md`)
        let modifyFile = {...files[id],title,isNew:false,path:newPath} 
        const newFiles = {...files,[id]:modifyFile}
 
@@ -178,7 +188,7 @@ function App() {
             }
           })
        }else{
-         let oldPath = join(savedLocation,`${files[id].title}.md`)
+         let oldPath = files[id].path
         fileHelper.renameFile(oldPath,
           newPath
         )
@@ -220,13 +230,65 @@ function App() {
      }
 
       const saveCurrentFile = ()=>{
-     fileHelper.writeFile(join(savedLocation,`${activeFile.title}.md`),
+     fileHelper.writeFile(join(activeFile.path),
      activeFile.body
      ).then(()=>{
        setUnsaveFileIDs(unsaveFileIDs.filter(id=>id !== activeFile.id))
      })
       }
+    const importFiles = ()=>{
+      remote.dialog.showOpenDialog({
+        title:'选择导入的 Markdown 文件',
+        properties:['openFile','multiSelections'],
+        filters:[
+          {name:'Markdown files',extensions:['md']}
+        ]
+      },(paths=>{
+        if(Array.isArray(paths)){
+          //过滤electron-store里已经有的数据
+         const filteredPaths = paths.filter(path=>{
+           const alreadyAdded = Object.values(files).find(file=>{
+             return file.path ==path
+           })
+           return !alreadyAdded
+         })
 
+        
+          //扩展数组里的对象 
+           const importFilesArr = filteredPaths.map(path=>{
+             return {
+               id:uuidv4(),
+               title:basename(path,extname(path)),
+               path,
+             }
+           })
+         //获取flatten结构的数组
+         const newFiles = {...files,...flattenArr(importFilesArr)}
+         //setState 更新updateState
+         
+         setFiles(newFiles)
+         saveFilesToStore(newFiles)
+         if(importFilesArr.length > 0){
+           remote.dialog.showMessageBox({
+             type:'info',
+             title:`文件导入成功！`,
+             message:`成功导入了${importFilesArr.length}个文件`,
+           })
+         }
+        }
+      }))
+
+    }
+
+
+
+      //监听ipc事件
+      useIpcRenderer({
+        'create-new-file':createNewFile,
+        'import-file':importFiles,
+        'save-edit-file':saveCurrentFile
+      })
+      
   return (
     <div className="App container-fluid px-0">
       <div className="row no-gutters">
@@ -253,6 +315,8 @@ function App() {
                       text="导入"
                       colorClass="btn-success"
                       icon={faFileImport}
+                      onBtnclick={importFiles}
+                      
                       />
                      
                 </div>
@@ -288,12 +352,12 @@ function App() {
 
                 </Fragment>
              }
-              <BottomBtn 
+              {/* <BottomBtn 
                       text="保存"
                       colorClass="btn-success"
                       icon={faSave}
                       onBtnclick={saveCurrentFile}
-                      />
+                      /> */}
           </div>
          
        </div>
