@@ -19,7 +19,7 @@ const { join ,basename,extname,dirname} = window.require('path')
 const { remote,ipcRenderer } = window.require('electron')
 const  Store = window.require('electron-store')
 const fileStore = new Store({'name':'Files Data'})
-
+const settingStore = new Store({name:'Settings'})
 
 
 //保存文件列表到store
@@ -68,7 +68,7 @@ function App() {
     const [ openFileIDs,setOpenFileIDs ] = useState([])
     const [ unsaveFileIDs,setUnsaveFileIDs] = useState([])
     const [ searchedFiles,setSearchedFiles] = useState([])
-    const savedLocation = remote.app.getPath('documents')
+    const savedLocation = settingStore.get('savedLocation') || remote.app.getPath('documents')
     const filesArr = objToArr(files)
     const openedFiles = openFileIDs.map(openID=>{
       return files[openID]

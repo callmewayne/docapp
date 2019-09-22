@@ -1,5 +1,6 @@
 const { remote } = require('electron')
-
+const Store = require('electron-store')
+const settingStore = new Store({name:'Settings'})
 
 
 const $ = (id)=>{
@@ -7,5 +8,25 @@ const $ = (id)=>{
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-    
+    let savedLocation = settingStore.get('savedLocation')
+    if(savedLocation){
+        $('saved-file-location').value = savedLocation
+    }
+    $('select-new-location').addEventListener('click',()=>{
+         remote.dialog.showOpenDialog({
+             properties:['openDirectory'],
+             message:'选择文件的存储路径',
+
+         },(path)=>{
+               if(Array.isArray(path)){
+               console.log(path)
+                   $('saved-file-location').value = path[0]
+                   savedLocation =  path[0]
+               }
+         })
+    })
+    $('settings-form').addEventListener('submit',()=>{
+        settingStore.set('savedLocation',savedLocation)
+        remote.getCurrentWindow().close()
+    })
 })

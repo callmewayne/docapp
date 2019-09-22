@@ -9,6 +9,9 @@ import useContextMenu from '../hooks/useContextMenu'
 import {getParentNode}  from  '../utils/helper'
 const { join ,basename,extname,dirname} = window.require('path')
 const { remote } = window.require('electron')
+
+
+
 const FilesList = ({files,onFileClick,onSaveEdit,onFileDelete})=>{
 const [ editStatus,setEditStatus ] = useState(false)
 const [ value,setValue ] = useState('')
