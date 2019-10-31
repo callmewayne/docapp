@@ -68,7 +68,7 @@ function App() {
     const [ openFileIDs,setOpenFileIDs ] = useState([])
     const [ unsaveFileIDs,setUnsaveFileIDs] = useState([])
     const [ searchedFiles,setSearchedFiles] = useState([])
-    const savedLocation = settingStore.get('savedLocation') || remote.app.getPath('documents')
+    const savedLocation = settingStore.get('savedLocation') || remote.app.getPath('documents                                              ')
     const filesArr = objToArr(files)
     const openedFiles = openFileIDs.map(openID=>{
       return files[openID]
@@ -352,12 +352,12 @@ function App() {
 
                 </Fragment>
              }
-              {/* <BottomBtn 
+              <BottomBtn 
                       text="保存"
                       colorClass="btn-success"
                       icon={faSave}
                       onBtnclick={saveCurrentFile}
-                      /> */}
+                      />
           </div>
          
        </div>
