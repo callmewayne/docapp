@@ -196,3 +196,9 @@ document.querySelector(targetSelector).contains(e.target)
 #### DOMContentLoaded 与 load 事件的区别
 DOMContentLoaded 指的是文档中 DOM 内容加载完毕的时间，也就是说 HTML 结构已经完整。但是我们知道，很多页面包含图片、特殊字体、视频、音频等其他资源，这些资源由网络请求获取，DOM 内容加载完毕时，由于这些资源往往需要额外的网络请求，还没有请求或者渲染完成。而当页面上所有资源加载完成后，load 事件才会被触发。因此，在时间线上，load 事件往往会落后于 DOMContentLoaded 事件。
 
+#### 流的类型
+- readable可读流
+- writeable可写流
+- duplex双向流
+- transform转换流
+

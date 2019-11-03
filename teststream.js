@@ -1,9 +1,15 @@
-const  QiniuManager = require('./utils/QiniuManager')
+// const fs = require('fs')
+// const zlib = require('zlib')
+// const src = fs.createReadStream('./src/test.js')
+// const writeDesc = fs.createWriteStream('./test.zip')
+// src.pipe(zlib.createGzip()).pipe(writeDesc)//转换流，gulp
+const path = require('path')
+const  QiniuManager = require('./src/utils/QiniuManager')
 const accessKey = 'FrzGLaK_GX5y-EyNg7lEZAP2otACOoYnVwVSHtsM'
 const secretKey = 'vFvIvQD9v1bvRqD2g19ulVE5I6yJj4LEQVuEJQso'
 
 const localFile = "C:/Users/wayne/Documents/newDocuments/newname.md"
-const key = 'newname.md'
+const key = 'newnam.md'
 const manager = new QiniuManager(accessKey,secretKey,'docstoreage')
 //manager.uploadFile(key,localFile)
 // manager.deleteFile(key)
@@ -14,4 +20,5 @@ const downloadPath = path.join(__dirname,key)
 // })
 
 manager.downloadFile(key,downloadPath)
+
 

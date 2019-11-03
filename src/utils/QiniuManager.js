@@ -1,5 +1,6 @@
 const qiniu = require('qiniu')
-
+const axios = require('axios')
+const fs = require('fs')
 class QiniuManager{
     constructor(accessKey, secretKey,bucket){
         this.mac =  new qiniu.auth.digest.Mac(accessKey, secretKey);
@@ -28,7 +29,33 @@ class QiniuManager{
           })
           
    }
+   //下载文件
+   downloadFile(key,downloadPath){
+       this.generateDownloadLink(key).then(link=>{
+           const timeStamp = new Date().getTime()
+           const url = `${link}?timestamp=${timeStamp}`
+           console.log(url)
+           return axios({
+               url,
+               method:"GET",
+               responseType:'stream',
+               headers:{'Cache-Control':'no-cache'}
+           }).then(response=>{
+            
+               const writer = fs.createWriteStream(downloadPath)
+               response.data.pipe(writer)
+               return new Promise((resolve,reject)=>{
+                   writer.on('finish',resolve)
+                   writer.on('error',reject)
+               })
+           })
+       }).catch(err=>{
+        console.log(err.response)
+        return Promise.reject({err:err.response})
+    })
+   }
 
+   //删除文件
    deleteFile(key){
     return new Promise((resolve,reject)=>{
         this.bucketManager.delete(this.bucket,key, this._handleCallback(resolve,reject))
@@ -36,8 +63,28 @@ class QiniuManager{
     })
      
    }
-
-
+    //获取bucket域名
+    getBucketDomain(){
+        const reqUrl = `http://api.qiniu.com/v6/domain/list?tbl=${this.bucket}`
+        const digest = qiniu.util.generateAccessToken(this.mac,reqUrl)
+        return new Promise((resolve,reject)=>{
+            qiniu.rpc.postWithoutForm(reqUrl,digest,this._handleCallback(resolve,reject))
+        })
+    }
+    generateDownloadLink(key){
+        const domainPromise = this.publicBucketDomain?
+        Promise.resolve([this.publicBucketDomain]):
+        this.getBucketDomain()
+        return domainPromise.then(data=>{
+            if(Array.isArray(data) && data.length>0){
+                const pattern = /^https?/
+                this.publicBucketDomain = pattern.test(data[0])?data[0]:`http://${data[0]}`   
+                return this.bucketManager.publicDownloadUrl(this.publicBucketDomain,key)
+            }else{
+                throw Error('域名未找到')
+            }
+        })
+    }
    _handleCallback(resolve,reject){
        return (respErr,respBody, respInfo)=>{
             if (respErr) {
