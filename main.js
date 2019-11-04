@@ -40,6 +40,7 @@ app.on('ready',()=>{
         }
         const settingsFileLocation = `file://${path.join(__dirname,'./settings/setting.html')}`
      settingsWindow = new AppWindow(settingWindowConfig,settingsFileLocation)
+    // settingsWindow.removeMenu()
      settingsWindow.on('closed',()=>{
         settingsWindow = null
     })
