@@ -6,7 +6,7 @@ import { faPlus,faFileImport ,faSave} from '@fortawesome/free-solid-svg-icons'
 import SimpleMDE from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
 import fileHelper from './utils/fileHelper'
-import { flattenArr,objToArr} from './utils/helper'
+import { flattenArr,objToArr,timestampToString} from './utils/helper'
 import uuidv4 from 'uuid/v4'
 import FileSearch from './components/FileSearch'
 import FilesList from './components/FileList'
@@ -20,18 +20,20 @@ const { remote,ipcRenderer } = window.require('electron')
 const  Store = window.require('electron-store')
 const fileStore = new Store({'name':'Files Data'})
 const settingStore = new Store({name:'Settings'})
-
-
+console.log(fileStore.get('files'))
+const getAutoSync = () => ['accessKey', 'secretKey', 'bucketName', 'enableAutoSync'].every(key => !!settingStore.get(key))
 //保存文件列表到store
 const saveFilesToStore = (files)=>{
   //不需要把所有的信息都存到filesystem里
   const fileStoreObj = objToArr(files).reduce((result,file)=>{
-    const { id, path ,title,createdAt} = file
+    const { id, path ,title,createdAt,isSynced,updatedAt} = file
     result[id] = {
       id,
       path,
       title,
-      createdAt
+      createdAt,
+      isSynced,
+      updatedAt
     }
     return result
   },{})
@@ -40,27 +42,7 @@ const saveFilesToStore = (files)=>{
 
 
 
-let defaultFiles = [
-  // {
-  //     id:'1',
-  //     title:'first poo',
-  //     body:'should be',
-  //     createdAt:123456
-  // },
-  // {
-  //     id:'2',
-  //     title:'secend poo',
-  //     body:'## should be',
-  //     createdAt:123456
-  // },
- 
-  // {
-  //     id:'3',
-  //     title:'thirds post',
-  //     body:'## thirds post',
-  //     createdAt:123456
-  // },
-]
+
 
 function App() {
     const [ files,setFiles] = useState(fileStore.get('files') || {})
@@ -92,18 +74,24 @@ function App() {
     const fileClick = (fileID)=>{
       setActiveFileID(fileID)
       const currentFile = files[fileID]
-      if(!currentFile.isLoaded){
-            fileHelper.readFile(currentFile.path).then((value=>{
-              const newFile = {...files[fileID],body:value,isLoaded:true}
-              setFiles({...files,[fileID]:newFile})
-            })).catch(err=>{
-              //如果没有找到本地文件，则会删除files里对应的文件
-              if(err.toString().includes('no such file or directory')){
-                notFoundFile(fileID)
-              }else{
-                console.log(false)
-              }
-            })
+      const { id,title,path,isLoaded} = currentFile
+      if(!isLoaded){
+        if(getAutoSync()){
+          ipcRenderer.send('download-file',{key:`${title}.md`,path,id})
+        }else{
+          fileHelper.readFile(currentFile.path).then((value=>{
+            const newFile = {...files[fileID],body:value,isLoaded:true}
+            setFiles({...files,[fileID]:newFile})
+          })).catch(err=>{
+            //如果没有找到本地文件，则会删除files里对应的文件
+            if(err.toString().includes('no such file or directory')){
+              notFoundFile(fileID)
+            }else{
+              console.log(false)
+            }
+          })
+        }
+            
       }
       if(!openFileIDs.includes(fileID)){
          setOpenFileIDs([...openFileIDs,fileID])
@@ -228,12 +216,17 @@ function App() {
    
        setFiles({...files,[newId]:newFile})
      }
-
+    
+     //保存文件方法
       const saveCurrentFile = ()=>{
-     fileHelper.writeFile(join(activeFile.path),
-     activeFile.body
-     ).then(()=>{
+        const { path ,body,title} = activeFile
+     fileHelper.writeFile(join(path),body).then(()=>{
        setUnsaveFileIDs(unsaveFileIDs.filter(id=>id !== activeFile.id))
+         
+        if(getAutoSync()){
+          ipcRenderer.send('upload-file',{key:`${title}.md`,path
+})
+        }
      })
       }
     const importFiles = ()=>{
@@ -279,14 +272,37 @@ function App() {
       }))
 
     }
-
-
-
+     //自动保存事件
+     const activeFileUploaded = ()=>{
+       const { id} = activeFile
+       const modifiedFile = {...files[id],isSynced:true,updatedAt:new Date().getTime()}
+       const newFiles = { ...files,[id]:modifiedFile }
+       setFiles(newFiles)
+       saveFilesToStore(newFiles)
+     }
+     //自动下载事件
+     const activeFileDownloaded =(event,message)=>{
+      const currentFile = files[message.id]
+       const {  id,path} = currentFile
+       fileHelper.readFile(path).then(value=>{
+         let newFile
+         if(message.status=='download-success'){
+           newFile = {...files[id],body:value,isLoaded:true,isSynced:true,updatedAt:new Date().getTime()}
+         }else{
+          newFile = {...files[id],body:value,isLoaded:true,isSynced:true}
+         }
+         const newfiles = {...files,newFile}
+         setFiles(newfiles)
+         saveFilesToStore(newfiles)
+       })
+     }
       //监听ipc事件
       useIpcRenderer({
         'create-new-file':createNewFile,
         'import-file':importFiles,
-        'save-edit-file':saveCurrentFile
+        'save-edit-file':saveCurrentFile,
+        'active-file-uploaded':activeFileUploaded,
+        'file-download':activeFileDownloaded
       })
       
   return (
@@ -345,19 +361,22 @@ function App() {
                         onChange={(value)=>{fileChange(activeFile.id,value)}}
                         value={activeFile && activeFile.body }
                         options={{
-                          minHeight:"450px"
+                          minHeight:"437px"
 
                         }}
+                       
                 />
-
+                     {
+                          activeFile.isSynced && <span className="sync-status">已同步，上次同步：{timestampToString(activeFile.updatedAt)}</span>
+                     }
                 </Fragment>
              }
-              <BottomBtn 
+              {/* <BottomBtn 
                       text="保存"
                       colorClass="btn-success"
                       icon={faSave}
                       onBtnclick={saveCurrentFile}
-                      />
+                      /> */}
           </div>
          
        </div>

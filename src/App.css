@@ -31,6 +31,17 @@
     transform: rotate(360deg);
   }
 }
+.CodeMirror-scroll{
+  height: 425px !important;
+  padding-bottom: 0;
+}
+.sync-status{
+  font-size: 12px;
+  color:#959694;
+  position: relative;
+  bottom: 14px;
+  left: 10px;
+}
 .icon-button{
   background: none;
   border: none;
