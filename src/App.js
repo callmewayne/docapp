@@ -12,7 +12,7 @@ import FileSearch from './components/FileSearch'
 import FilesList from './components/FileList'
 import BottomBtn from './components/BottomBtn'
 import TabList from './components/TabList'
-
+import Loader from './components/Loader'
 import useIpcRenderer from './hooks/useIpcRenderer'
 
 const { join ,basename,extname,dirname} = window.require('path')
@@ -50,6 +50,7 @@ function App() {
     const [ openFileIDs,setOpenFileIDs ] = useState([])
     const [ unsaveFileIDs,setUnsaveFileIDs] = useState([])
     const [ searchedFiles,setSearchedFiles] = useState([])
+    const [ isLoading,setLoading] = useState(false)
     const savedLocation = settingStore.get('savedLocation') || remote.app.getPath('documents')
     const filesArr = objToArr(files)
     const openedFiles = openFileIDs.map(openID=>{
@@ -296,17 +297,38 @@ function App() {
          saveFilesToStore(newfiles)
        })
      }
+
+     const filesUploaded = ()=>{
+        const newFiles = objToArr(files).reduce((result,file)=>{
+              const currentTime = new Date().getTime()
+              result[file.id]={
+                ...files[file.id],
+                isSynced:true,
+                updatedAt:currentTime
+              }
+              return result
+        },{})
+        setFiles(newFiles)
+        saveFilesToStore(newFiles)
+     }
+     const downloadFilesFromQiniu = ()=>{}
       //监听ipc事件
       useIpcRenderer({
         'create-new-file':createNewFile,
         'import-file':importFiles,
         'save-edit-file':saveCurrentFile,
         'active-file-uploaded':activeFileUploaded,
-        'file-download':activeFileDownloaded
+        'file-download':activeFileDownloaded,
+        'loading-status':(message,status)=>{
+         setLoading(status)
+        },
+        'files-uploaded':filesUploaded,
+        'download-files-from-qiniu':downloadFilesFromQiniu
       })
       
   return (
     <div className="App container-fluid px-0">
+      { isLoading && <Loader />} 
       <div className="row no-gutters">
          <div className="col-4 bg-light left-panel">
               <FileSearch title='My Document' onFileSearch={fileSearch}/>

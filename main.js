@@ -102,5 +102,36 @@ ipcMain.on('download-file',(event,data)=>{
    }
   }))
 })
+ipcMain.on('upload-all-to-qiniu',()=>{
+    const manager = createManger()
+    mainWindow.webContents.send('loading-status',true)
+    const filesObj = fileStore.get('files') || {}
+    const uploadPromiseArr = Object.keys(filesObj).map(key=>{
+        const file = filesObj[key]
+        return manager.uploadFile(`${file.title}.md`,file.path)
+
+    })
+    Promise.all(uploadPromiseArr).then(result=>{
+        console.log(result)
+        dialog.showMessageBox({
+            type:'info',
+            title:`成功上传了${result.length}个文件`,
+            message:`成功上传了${result.length}个文件`,
+        })
+        mainWindow.webContents.send('files-uploaded')
+    }).catch(error=>{
+        dialog.showErrorBox('同步失败','请检查七牛云参数')
+    }).finally(()=>{
+        mainWindow.webContents.send('loading-status',false)
+
+    })
+   
+})
+ipcMain.on('download-from-qiniu',()=>{
+    const manager = createManger()
+    manager.getFileList().then(item=>{
+        console.log(item)
+    })
+})
 })
   
