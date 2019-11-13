@@ -16,7 +16,7 @@ const createManger = ()=>{
     return new QiniuManager(accessKey,secretKey,bucketName)
 }
 app.on('ready',()=>{
-    require('devtron').install()
+    // require('devtron').install()
     // mainWindow = new BrowserWindow({
     //     width:1024,
     //     height:680,
@@ -30,9 +30,9 @@ app.on('ready',()=>{
         height:680
     }
 
-    const urlLocation = isDev? 'http://localhost:3000':null
+    const urlLocation = isDev? 'http://localhost:3000':`file://${path.join(__dirname,'./build/index.html')}`
     mainWindow  = new AppWindow(mainWindowConfig,urlLocation)
-    mainWindow.webContents.openDevTools()
+   // mainWindow.webContents.openDevTools()
    // mainWindow.loadURL(urlLocation)
    
    mainWindow.on('closed',()=>{
